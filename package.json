@@ -1,0 +1,21 @@
+{
+	"name": "snippet-generator",
+	"version": "1.0.7",
+	"description": "Save code snippets for saving time on writing boiler plate code",
+	"author": "Anshuman Khanna",
+	"type": "module",
+	"main": "dist/index.js",
+	"bin": {
+		"snip": "dist/index.js"
+	},
+	"scripts": {
+		"build": "tsc",
+		"quickcheck": "npm run build && node .",
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"publish-check": "npm run build && npm version patch && npm publish"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.6",
+		"typescript": "^5.7.3"
+	}
+}

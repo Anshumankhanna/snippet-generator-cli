@@ -28,10 +28,18 @@ type OutputType<T> = {
     error: string | null;
     result: T
 };
-
-const platform = osPlatform() as SupportedPlatformsType;
+const platform: Readonly<SupportedPlatformsType> = osPlatform() as SupportedPlatformsType;
 const isFlag: RegExp = /^-{1,2}.*$/;
+const commands = ["add", "move", "--help", "--version", "-v"] as const;
 
+function argumentErrorFunction(userArgs: string[], index: number, missingArg: string) {
+    if (userArgs.length <= index + 1) {
+        throw new Error(`Didn't provide ${missingArg}`);
+    }
+}
+function cleanJsonComments(input: string) {
+    return input.split("\n").filter(elem => !/^\t\/\/.*$/.test(elem)).join("\n");
+}
 function getArgs(): string[] {
     return process.argv.slice(2);
 }
@@ -43,6 +51,9 @@ function getSnippetsDirectory(): string {
         "User",
         "snippets"
     );
+}
+function makeJsonFilePath(input: string): string {
+    return path.join(getSnippetsDirectory(), `${input}.json`);
 }
 function getClipboard(): Promise<OutputType<string>> {
     const clipboardCommand = platformData[platform].clipboard;
@@ -65,29 +76,175 @@ function getClipboard(): Promise<OutputType<string>> {
         });
     });
 }
-function executeAll() {
+async function execute() {
     const userArgs = getArgs();
-    const snippetDirectory = getSnippetsDirectory();
 
-    userArgs.forEach(async (elem, index) => {
+    if (userArgs[0] === "add") {
+        await add();
+    } else if (userArgs[0] === "move") {
+        await move();
+    } else if (userArgs[0] === "-v" || userArgs[0] === "--version") {
+        await version();
+    } else {
+        help();
+    }
+}
+async function add() {
+    const userArgs = getArgs().slice(1);
+    const newSnippet: Partial<{
+        language: string;
+        title: string;
+        prefix: string;
+        body: string[];
+        description: string;
+    }> = {};
+
+    for (let index = 0; index < userArgs.length; ++index) {
+        const elem = userArgs[index];
+        let property = "";
+
         if (elem === "-l" || elem === "--language") {
-            if (userArgs.length <= index + 1) {
-                return ;
-            }
-            
-            const filePath = path.join(snippetDirectory, `${userArgs[index + 1]}.json`);
+            property = "language";
+        } else if (elem === "-t" || elem === "--title") {
+            property = "title";
+        } else if (elem === "-p" || elem === "--prefix") {
+            property = "prefix";
+        } else if (elem === "-d" || elem === "--description") {
+            property = "description";
+        } else {
+            continue;
+        }
+        
+        try {
+            argumentErrorFunction(userArgs, index, property);
+        } catch (error) {
+            console.error(error);
+            return help();
+        }
+        
+        newSnippet[property] = userArgs[++index];
+    }
 
-            let fileHandle: FileHandle;
+    if (newSnippet.language === undefined || newSnippet.prefix === undefined) {
+        return help();
+    }
 
-            try {
-                fileHandle = await open(filePath, 'r');
-                const content = await fileHandle.readFile({ encoding: "utf-8" });
-                console.log(content);
-            } finally {
-                fileHandle.close();
+    const { error, result } = await getClipboard();
+
+    if (error !== null) {
+        console.error(error);
+        return help();
+    } else if (result.trim() === "") {
+        console.error("You copied nothing");
+        return help();
+    }
+
+    newSnippet.body = result.split("\n");
+
+    let fileHandle: FileHandle;
+    const filePath = makeJsonFilePath(newSnippet.language);
+
+    try {
+        fileHandle = await open(filePath, "r+");
+        
+        const content = await fileHandle.readFile({ encoding: "utf-8" });
+        const contentJSON = JSON.parse(cleanJsonComments(content));
+        const date = (new Date()).toString();
+        const newData = {
+            [newSnippet.title ?? date]: {
+                prefix: newSnippet.prefix,
+                body: newSnippet.body,
+                description: newSnippet.description ?? date
             }
         }
-    });
+
+        await fileHandle.write(JSON.stringify({...contentJSON, ...newData}, null, 4), 0);
+
+        console.log(`${newSnippet.language}.json has been modified`);
+    } catch (error) {
+        console.error(error);
+    } finally {
+        await fileHandle?.close();
+    }
+}
+function help() {
+    console.log("Yes, this creator made all the functionality but then was too bored to write the help flag");
+}
+async function move() {
+    const userArgs = getArgs().slice(1);
+    const files: Partial<{
+        from: string;
+        to: string;
+    }> = {};
+
+    for (let index = 0; index < userArgs.length; ++index) {
+        const elem = userArgs[index];
+        let property = "";
+
+        if (elem === "-f" || elem === "--from") {
+            property = "from";
+        } else if (elem === "-t" || elem === "--to") {
+            property = "to";
+        } else {
+            continue;
+        }
+
+        try {
+            argumentErrorFunction(userArgs, index, property);
+        } catch (error) {
+            console.error(error);
+            return help();
+        }
+
+        files[property] = userArgs[++index];
+    }
+
+    if (files.from === undefined || files.to === undefined) {
+        return help();
+    }
+
+    const fromFilePath = makeJsonFilePath(files.from);
+    const toFilePath = makeJsonFilePath(files.to);
+    let fromFileHandle: FileHandle;
+    let toFileHandle: FileHandle;
+
+    try {
+        fromFileHandle = await open(fromFilePath, "r");
+        toFileHandle = await open(toFilePath, "r+");
+        
+        const fromContent = await fromFileHandle.readFile({ encoding: "utf-8" });
+        const toContent = await toFileHandle.readFile({ encoding: "utf-8" });
+        const fromContentJSON = JSON.parse(cleanJsonComments(fromContent));
+        const toContentJSON = JSON.parse(cleanJsonComments(toContent));
+
+        await toFileHandle.write(JSON.stringify({...toContentJSON, ...fromContentJSON}, null, 4), 0);
+
+        console.log(`${files.to}.json has been modified`);
+    } catch (error) {
+        console.error(error);
+        return help();
+    } finally {
+        await fromFileHandle?.close();
+        await toFileHandle?.close();
+    }
+}
+async function version() {
+    const packageJsonPath = path.resolve(import.meta.dirname, "../package.json");
+    
+    let fileHandle: FileHandle;
+
+    try {
+        fileHandle = await open(packageJsonPath, "r");
+
+        const content = await fileHandle.readFile({ encoding: "utf-8" });
+        const contentJson = JSON.parse(content);
+
+        console.log(contentJson.version);
+    } catch (error) {
+
+    } finally {
+        await fileHandle?.close();
+    }
 }
 
-executeAll();
+await execute();

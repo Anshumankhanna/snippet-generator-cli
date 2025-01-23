@@ -40,6 +40,9 @@ function argumentErrorFunction(userArgs: string[], index: number, missingArg: st
 function cleanJsonComments(input: string) {
     return input.split("\n").filter(elem => !/^\t\/\/.*$/.test(elem)).join("\n");
 }
+function color(text: string, foreground?: number, background?: number): string {
+    return `\x1b[38;5;${foreground};48;5;${background}m${text}\x1b[0m`;
+}
 function getArgs(): string[] {
     return process.argv.slice(2);
 }
@@ -188,7 +191,7 @@ add:                           To add a new snippet to a snippet file
     --description/-d           - It adds a description for your snippet
 
     FOR EXAMPLE: snip add -l javascript -p pint -t "parseInt input" -d "Code to take integer input from the terminal"
-    ** Your code which you want to make snippet of must already be copied and be in your clipboard, that will be the body of the snippet.
+    ${color("** Your code which you want to make snippet of must already be copied and be in your clipboard, that will be the body of the snippet", 0, 31)}
     ** Fields title and description are set to new Date() when you don't provide those fields, so it is recommended that you provide at least the title
 
 move:                           To move snippets from one file to the another, it doesn't erase existing snippets from the target file and just merges the two files into the target file

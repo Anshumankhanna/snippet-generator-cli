@@ -62,12 +62,13 @@ function getClipboard(): Promise<OutputType<string>> {
         result: ""
     };
 
-    return new Promise((res) => {
+    return new Promise((res, rej) => {
         exec(clipboardCommand, (error, stdout, stderr) => {
             if (error || stderr) {
                 console.error(error);
                 console.error(stderr);
                 output.error = "Something went wrong";
+                rej(output);
             } else {
                 output.result = stdout.trim();
             }
@@ -167,8 +168,42 @@ async function add() {
         await fileHandle?.close();
     }
 }
+async function openFile() {
+    console.log("This command is specifically made for VS code users and will not work if you are not using VS code")
+}
 function help() {
-    console.log("Yes, this creator made all the functionality but then was too bored to write the help flag");
+    console.log(`
+snip [commands args]/[options]
+                                
+Commands:
+add:                           To add a new snippet to a snippet file
+
+    --language/-l*             - Tell the language in which you are working
+
+    --title/-t                 - Set the title for your snippet, it is displayed right next to your snippet when you type and don't press enter
+                                - This will be the key of your snippet in the corresponding .json file
+
+    --prefix/-p*               - This command will trigger the snippet
+
+    --description/-d           - It adds a description for your snippet
+
+    FOR EXAMPLE: snip add -l javascript -p pint -t "parseInt input" -d "Code to take integer input from the terminal"
+    ** Your code which you want to make snippet of must already be copied and be in your clipboard, that will be the body of the snippet.
+    ** Fields title and description are set to new Date() when you don't provide those fields, so it is recommended that you provide at least the title
+
+move:                           To move snippets from one file to the another, it doesn't erase existing snippets from the target file and just merges the two files into the target file
+
+    --from/-f*                 - The file you are moving from, just write the language name
+
+    --to/-t*                   - The file you want to move snippets in, just write the language name
+
+
+** The arguments that are marked with (*) are necessary and an error will be returned if you don't set those args
+
+Options:
+--help, -h                     Show help
+--version, -v                  Show version number
+	`);
 }
 async function move() {
     const userArgs = getArgs().slice(1);

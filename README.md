@@ -23,3 +23,7 @@
 - Having to write these snippets manually take time and there is no simple way of porting them.
 - When I switched from JavaScript to TypeScript, I still required all my JavaScript snippets however, they weren't available and I needed the same for .jsx and .tsx as well.
 - Hence I created this CLI
+
+#Links
+- [npm-registry](https://www.npmjs.com/package/snippet-generator)
+- [github](https://github.com/Anshumankhanna/snippet-generator-cli)

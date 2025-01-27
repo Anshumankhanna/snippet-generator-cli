@@ -210,12 +210,13 @@ function help() {
 snip [commands args]/[options]
                                 
 Commands:
-add:                           To add a new snippet to a snippet file
+add [-l/--language] <language> [-p/--prefix] <prefix> [-t/--title] <title> [-d/--description] <description>:
+                               To add a new snippet to a snippet file
 
     --language/-l*             - Tell the language in which you are working
 
     --title/-t                 - Set the title for your snippet, it is displayed right next to your snippet when you type and don't press enter
-                                - This will be the key of your snippet in the corresponding .json file
+                               - This will be the key of your snippet in the corresponding .json file
 
     --prefix/-p*               - This command will trigger the snippet
 
@@ -225,7 +226,8 @@ add:                           To add a new snippet to a snippet file
     ${color("** Your code which you want to make snippet of must already be copied and be in your clipboard, that will be the body of the snippet", 0, 31)}
     ** Fields title and description are set to new Date() when you don't provide those fields, so it is recommended that you provide at least the title
 
-move:                           To move snippets from one file to the another, it doesn't erase existing snippets from the target file and just merges the two files into the target file
+move [-f/--from] <from> [-t/--to] <to>:
+                               To move snippets from one file to the another, it doesn't erase existing snippets from the target file and just merges the two files into the target file
 
     --from/-f*                 - The file you are moving from, just write the language name
 
@@ -233,6 +235,7 @@ move:                           To move snippets from one file to the another, i
 
 
 ** The arguments that are marked with (*) are necessary and an error will be returned if you don't set those args
+open <language>:               To open a snippet file
 
 Options:
 --help, -h                     Show help

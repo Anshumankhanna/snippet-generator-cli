@@ -29,8 +29,30 @@ type OutputType<T> = {
     result: T
 };
 const platform: Readonly<SupportedPlatformsType> = osPlatform() as SupportedPlatformsType;
-const isFlag: RegExp = /^-{1,2}.*$/;
-const commands = ["add", "move", "--help", "--version", "-v"] as const;
+const isShortFlag: RegExp = /^-[hv]$/;
+const commands = {
+    add: {
+        fn: add
+    },
+    move: {
+        fn: move
+    },
+    open: {
+        fn: openFile
+    },
+    "--help": {
+        fn: help
+    },
+    "-h": {
+        alias: "--help"
+    },
+    "--version": {
+        fn: version
+    },
+    "-v": {
+        alias: "--version"
+    }
+} as const;
 
 function argumentErrorFunction(userArgs: string[], index: number, missingArg: string) {
     if (userArgs.length <= index + 1) {
@@ -56,7 +78,7 @@ function getSnippetsDirectory(): string {
     );
 }
 function makeJsonFilePath(input: string): string {
-    return path.join(getSnippetsDirectory(), `${input}.json`);
+    return path.join(snippetDirectory, `${input}.json`);
 }
 function getClipboard(): Promise<OutputType<string>> {
     const clipboardCommand = platformData[platform].clipboard;
@@ -70,10 +92,8 @@ function getClipboard(): Promise<OutputType<string>> {
             if (error || stderr) {
                 console.error(error);
                 console.error(stderr);
-                output.error = "Something went wrong";
-                rej(output);
             } else {
-                output.result = stdout.trim();
+                
             }
 
             res(output);
@@ -81,20 +101,18 @@ function getClipboard(): Promise<OutputType<string>> {
     });
 }
 async function execute() {
-    const userArgs = getArgs();
-
-    if (userArgs[0] === "add") {
-        await add();
-    } else if (userArgs[0] === "move") {
-        await move();
-    } else if (userArgs[0] === "-v" || userArgs[0] === "--version") {
-        await version();
+    if (Object.keys(commands).includes(inputArgs[0])) {
+        if (isShortFlag.test(inputArgs[0])) {
+            await commands[commands[inputArgs[0]].alias].fn();
+        } else {
+            await commands[inputArgs[0]].fn();
+        }
     } else {
         help();
     }
 }
 async function add() {
-    const userArgs = getArgs().slice(1);
+    const userArgs = inputArgs.slice(1);
     const newSnippet: Partial<{
         language: string;
         title: string;
@@ -172,7 +190,20 @@ async function add() {
     }
 }
 async function openFile() {
-    console.log("This command is specifically made for VS code users and will not work if you are not using VS code")
+    const userArgs = inputArgs.slice(1);
+    const filePath: string = path.join(snippetDirectory, `${userArgs[0]}.json`);
+
+    await (new Promise((res, rej) => {
+        exec(`code ${filePath}`, (error, stdout, stderr) => {
+            if (error || stderr) {
+                console.error(error);
+                console.error(stderr);
+                rej("Error");
+            }
+            
+            res("Success");
+        });
+    }));
 }
 function help() {
     console.log(`
@@ -209,7 +240,7 @@ Options:
 	`);
 }
 async function move() {
-    const userArgs = getArgs().slice(1);
+    const userArgs = inputArgs.slice(1);
     const files: Partial<{
         from: string;
         to: string;
@@ -284,5 +315,8 @@ async function version() {
         await fileHandle?.close();
     }
 }
+
+const snippetDirectory = getSnippetsDirectory();
+const inputArgs = getArgs();
 
 await execute();

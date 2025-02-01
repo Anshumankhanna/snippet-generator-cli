@@ -8,6 +8,14 @@
 	"bin": {
 		"snip": "dist/index.js"
 	},
+	"pkg": {
+		"targets": [
+			"node22-linux-x64",
+			"node22-macos-x64",
+			"node22-win-x64"
+		],
+		"outputPath": "bin"
+	},
 	"scripts": {
 		"build": "tsc",
 		"quickcheck": "npm run build && node .",

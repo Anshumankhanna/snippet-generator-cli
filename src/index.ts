@@ -80,7 +80,7 @@ function getSnippetsDirectory(): string {
 function makeJsonFilePath(input: string): string {
     return path.join(snippetDirectory, `${input}.json`);
 }
-function getClipboard(): Promise<OutputType<string>> {
+async function getClipboard(): Promise<OutputType<string>> {
     const clipboardCommand = platformData[platform].clipboard;
     const output: OutputType<string> = {
         error: null,
@@ -93,7 +93,7 @@ function getClipboard(): Promise<OutputType<string>> {
                 console.error(error);
                 console.error(stderr);
             } else {
-                
+                output.result = stdout;
             }
 
             res(output);
@@ -157,6 +157,7 @@ async function add() {
         console.error(error);
         return help();
     } else if (result.trim() === "") {
+        console.log(result);
         console.error("You copied nothing");
         return help();
     }
